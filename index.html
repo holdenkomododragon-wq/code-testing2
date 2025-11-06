@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Blob Jumper</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #222; }
+    canvas { display: block; margin: auto; background: #333; }
+  </style>
+</head>
+<body>
+<canvas id="game" width="800" height="400"></canvas>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let level = 0;
+const levels = [
+  {
+    platforms: [
+      { x: 50, y: 350, w: 100, h: 20 },
+      { x: 200, y: 300, w: 100, h: 20 },
+      { x: 350, y: 250, w: 100, h: 20 },
+      { x: 500, y: 200, w: 100, h: 20 },
+      { x: 650, y: 150, w: 100, h: 20 }
+    ],
+    checkpoints: [1, 3],
+    goal: 4
+  },
+  {
+    platforms: [
+      { x: 50, y: 300, w: 100, h: 20 },
+      { x: 200, y: 250, w: 100, h: 20 },
+      { x: 350, y: 200, w: 100, h: 20 },
+      { x: 500, y: 150, w: 100, h: 20 },
+      { x: 650, y: 100, w: 100, h: 20 }
+    ],
+    checkpoints: [2],
+    goal: 4
+  }
+];
+
+let blob = {
+  x: 60,
+  y: 300,
+  vx: 0,
+  vy: 0,
+  w: 30,
+  h: 30,
+  checkpoint: { x: 60, y: 300 }
+};
+
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function update() {
+  blob.vx = 0;
+  if (keys["ArrowLeft"]) blob.vx = -4;
+  if (keys["ArrowRight"]) blob.vx = 4;
+  if (keys["ArrowUp"] && onGround()) blob.vy = -10;
+
+  blob.vy += 0.5; // gravity
+  blob.x += blob.vx;
+  blob.y += blob.vy;
+
+  const plats = levels[level].platforms;
+  for (let plat of plats) {
+    if (collide(blob, plat)) {
+      if (blob.vy > 0) {
+        blob.y = plat.y - blob.h;
+        blob.vy = 0;
+      }
+    }
+  }
+
+  for (let i of levels[level].checkpoints) {
+    const cp = levels[level].platforms[i];
+    if (collide(blob, cp)) {
+      blob.checkpoint = { x: cp.x + 10, y: cp.y - blob.h };
+    }
+  }
+
+  const goalPlat = levels[level].platforms[levels[level].goal];
+  if (collide(blob, goalPlat)) {
+    level++;
+    if (level >= levels.length) {
+      alert("🎉 You completed all levels!");
+      level = 0;
+    }
+    const start = levels[level].platforms[0];
+    blob.x = start.x + 10;
+    blob.y = start.y - blob.h;
+    blob.checkpoint = { x: blob.x, y: blob.y };
+    blob.vx = 0;
+    blob.vy = 0;
+  }
+
+  if (blob.y > canvas.height) {
+    blob.x = blob.checkpoint.x;
+    blob.y = blob.checkpoint.y;
+    blob.vx = 0;
+    blob.vy = 0;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#00f";
+  ctx.fillRect(blob.x, blob.y, blob.w, blob.h);
+
+  ctx.fillStyle = "#888";
+  for (let plat of levels[level].platforms) {
+    ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+  }
+
+  ctx.fillStyle = "#0f0";
+  for (let i of levels[level].checkpoints) {
+    const cp = levels[level].platforms[i];
+    ctx.fillRect(cp.x + cp.w / 2 - 5, cp.y - 10, 10, 10);
+  }
+
+  const goal = levels[level].platforms[levels[level].goal];
+  ctx.fillStyle = "#ff0";
+  ctx.fillRect(goal.x + goal.w / 2 - 10, goal.y - 15, 20, 15);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function collide(a, b) {
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y;
+}
+
+function onGround() {
+  for (let plat of levels[level].platforms) {
+    if (collide({ ...blob, y: blob.y + 1 }, plat)) return true;
+  }
+  return false;
+}
+
+loop();
+</script>
+</body>
+</html>
